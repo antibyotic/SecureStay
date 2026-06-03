@@ -58,3 +58,18 @@ def get_agencies():
         }
         for row in rows
    ]
+
+@app.get("/agencies/{id}")
+def get_agency(id): 
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM agencies WHERE id = %s", (id,))
+    row = cursor.fetchone()
+    return {
+                "id": row[0],
+                "name": row[1],
+                "domain": row[2],
+                "email": row[3],
+                "phone": row[4],
+                "address": row[5],
+                "created_at": row[6]
+    }
