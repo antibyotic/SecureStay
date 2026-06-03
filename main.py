@@ -5,6 +5,8 @@ from dotenv import load_dotenv
 from pydantic import BaseModel
 from typing import Optional
 import bcrypt
+from jose import jwt
+from datetime import datetime, timedelta
 
 load_dotenv()
 
@@ -95,3 +97,30 @@ def register_user(user: UserCreate):
     )
     conn.commit()
     return {"message": "User erfolgreich registriert"}
+    
+
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+@app.post("/login")
+def login(request: LoginRequest): 
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM users WHERE email = %s", (request.email,))
+    user = cursor.fetchone()
+
+    if not user:
+        return {"error": "Invalid credentials"}
+
+    stored_hash = user[3]
+    if not bcrypt.checkpw(request.password.encode(), stored_hash.encode()):
+        return {"error": "Invalid credentials"}
+    
+    token = jwt.encode(
+        {"user_id": user[0], "role": user[4], "exp": datetime.utcnow() + timedelta(hours=1)},
+        os.getenv("JWT_SECRET"), 
+        algorithm="HS256"
+    )
+
+    return {"token": token}
