@@ -3,6 +3,8 @@ import os
 from fastapi import FastAPI 
 from dotenv import load_dotenv
 from pydantic import BaseModel
+from typing import Optional
+import bcrypt
 
 load_dotenv()
 
@@ -28,6 +30,15 @@ class AgencyCreate(BaseModel):
     email: str
     phone: str 
     address: str 
+
+class UserCreate(BaseModel):
+    name: str
+    email: str
+    password: str
+    agency_id: Optional[int] = None 
+    
+
+
 
 @app.post("/agencies")
 def create_agency(agency:AgencyCreate):
@@ -73,3 +84,14 @@ def get_agency(id):
                 "address": row[5],
                 "created_at": row[6]
     }
+
+@app.post("/register")
+def register_user(user: UserCreate):
+    hashed = bcrypt.hashpw(user.password.encode(), bcrypt.gensalt()).decode()
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT INTO users (name, email, password_hash, role, agency_id, is_active, created_at) VALUES (%s, %s, %s, %s, %s, %s, NOW())",
+        (user.name, user.email, hashed, "kunde", user.agency_id, True)
+    )
+    conn.commit()
+    return {"message": "User erfolgreich registriert"}
