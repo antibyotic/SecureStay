@@ -38,3 +38,23 @@ def create_agency(agency:AgencyCreate):
     )
     conn.commit()
     return {"message": "Agentur erfolgreich erstellt"}
+
+@app.get("/agencies")
+def get_agencies(): 
+   cursor = conn.cursor()
+   cursor.execute(
+      "SELECT * FROM agencies"
+   )
+   rows = cursor.fetchall()
+   return [
+        {
+            "id": row[0],
+            "name": row[1],
+            "domain": row[2],
+            "email": row[3],
+            "phone": row[4],
+            "address": row[5],
+            "created_at": row[6]
+        }
+        for row in rows
+   ]
