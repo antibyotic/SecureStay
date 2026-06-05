@@ -22,6 +22,21 @@
 ### Mitarbeiter
 - Alle Immobilien sehen inkl. extra Details
 - Plattform verwalten
+- ein mitarbeiter kann immobilien erstellen
 
 ### Admin
 - Alles — innerhalb gesetzlicher Grenzen
+
+
+## API Zugriffsrechte
+
+| Endpoint | Methode | Berechtigung |
+|---|---|---|
+| /register | POST | Öffentlich |
+| /login | POST | Öffentlich |
+| /agencies | POST | Admin |
+| /agencies | GET | Mitarbeiter, Admin |
+| /agencies/{id} | GET | Mitarbeiter, Admin |
+| /properties | POST | Mitarbeiter, Admin |
+| /properties | GET | Alle eingeloggten User |
+| /properties/{id} | GET | Alle eingeloggten User |
