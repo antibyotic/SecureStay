@@ -23,6 +23,16 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
         return payload
     except:
         raise HTTPException(status_code=401, detail="Invalid token")
+    
+def require_admin(current_user = Depends(get_current_user)):
+    if current_user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Forbidden")
+    return current_user
+
+def require_staff(current_user = Depends(get_current_user)):
+    if current_user["role"] not in ["mitarbeiter","admin"]:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    return current_user
 
 conn = psycopg2.connect(
     host=os.getenv("DB_HOST"),
@@ -55,7 +65,7 @@ class UserCreate(BaseModel):
 
 
 @app.post("/agencies")
-def create_agency(agency:AgencyCreate):
+def create_agency(agency:AgencyCreate, current_user = Depends(require_admin)):
     cursor = conn.cursor()
     cursor.execute(
         "INSERT INTO agencies (name, domain, email, phone, address, created_at) VALUES (%s, %s, %s, %s, %s, NOW())",
@@ -65,7 +75,7 @@ def create_agency(agency:AgencyCreate):
     return {"message": "Agentur erfolgreich erstellt"}
 
 @app.get("/agencies")
-def get_agencies(current_user = Depends(get_current_user)): 
+def get_agencies(current_user = Depends(require_staff)): 
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM agencies")
     rows = cursor.fetchall()
@@ -83,7 +93,7 @@ def get_agencies(current_user = Depends(get_current_user)):
     ]
 
 @app.get("/agencies/{id}")
-def get_agency(id): 
+def get_agency(id, current_user = Depends(require_staff)): 
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM agencies WHERE id = %s", (id,))
     row = cursor.fetchone()
