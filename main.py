@@ -7,10 +7,22 @@ from typing import Optional
 import bcrypt
 from jose import jwt
 from datetime import datetime, timedelta
+from fastapi import FastAPI, Depends, HTTPException
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 load_dotenv()
 
 app = FastAPI()
+
+security = HTTPBearer()
+
+def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    token = credentials.credentials
+    try:
+        payload = jwt.decode(token, os.getenv("JWT_SECRET"), algorithms=["HS256"])
+        return payload
+    except:
+        raise HTTPException(status_code=401, detail="Invalid token")
 
 conn = psycopg2.connect(
     host=os.getenv("DB_HOST"),
@@ -53,13 +65,11 @@ def create_agency(agency:AgencyCreate):
     return {"message": "Agentur erfolgreich erstellt"}
 
 @app.get("/agencies")
-def get_agencies(): 
-   cursor = conn.cursor()
-   cursor.execute(
-      "SELECT * FROM agencies"
-   )
-   rows = cursor.fetchall()
-   return [
+def get_agencies(current_user = Depends(get_current_user)): 
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM agencies")
+    rows = cursor.fetchall()
+    return [
         {
             "id": row[0],
             "name": row[1],
@@ -70,7 +80,7 @@ def get_agencies():
             "created_at": row[6]
         }
         for row in rows
-   ]
+    ]
 
 @app.get("/agencies/{id}")
 def get_agency(id): 
