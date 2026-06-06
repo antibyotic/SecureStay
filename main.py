@@ -78,7 +78,7 @@ class BookingCreate(BaseModel):
     start_date: datetime
     end_date: datetime
     property_id: int = Field(gt=0)
-    
+
 # Agency Endpoints
 
 @app.post("/agencies")
@@ -167,6 +167,13 @@ def get_property(id, current_user = Depends(get_current_user)):
             "is_occupied": row[5],
             "created_at": row[6]
         }
+
+@app.delete("/properties/{id}")
+def delete_property(id: int, current_user = Depends(require_staff)):
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM properties WHERE id = %s", (id,))
+    conn.commit()
+    return {"message": "Immobilie erfolgreich gelöscht"}
     
 # Booking Endpoints
 
@@ -213,6 +220,13 @@ def get_my_bookings(current_user = Depends(get_current_user)):
         for row in rows
     ]
 
+@app.delete("/bookings/{id}")
+def delete_booking(id: int, current_user = Depends(require_admin)):
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM bookings WHERE id = %s", (id,))
+    conn.commit()
+    return {"message": "Buchung erfolgreich gelöscht"}
+
 # User Endpoints
 
 @app.post("/register")
@@ -226,6 +240,12 @@ def register_user(user: UserCreate):
     conn.commit()
     return {"message": "User erfolgreich registriert"}
     
+@app.delete("/users/{id}")
+def deactivate_user(id: int, current_user = Depends(require_admin)):
+    cursor = conn.cursor()
+    cursor.execute("UPDATE users SET is_active = false WHERE id = %s", (id,))
+    conn.commit()
+    return {"message": "User erfolgreich deaktiviert"}
 
 
 class LoginRequest(BaseModel):
