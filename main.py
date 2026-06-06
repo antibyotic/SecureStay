@@ -10,13 +10,14 @@ from datetime import datetime, timedelta
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
+
 load_dotenv()
 
 app = FastAPI()
 
 security = HTTPBearer()
 
-# Authorization
+# Authorization & Authentication
 
 def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
     token = credentials.credentials
@@ -72,6 +73,11 @@ class PropertyCreate(BaseModel):
     size_sqm: float
     monthly_price: float
     agency_id: int
+
+class BookingCreate(BaseModel):
+    start_date: datetime
+    end_date: datetime
+    property_id: int
 
 # Agency Endpoints
 
@@ -162,7 +168,50 @@ def get_property(id, current_user = Depends(get_current_user)):
             "created_at": row[6]
         }
     
+# Booking Endpoints
 
+@app.post("/bookings")
+def create_booking(booking: BookingCreate, current_user = Depends(get_current_user)):
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT INTO bookings (start_date, end_date, property_id, user_id, created_at) VALUES (%s, %s, %s, %s, NOW())",
+        (booking.start_date, booking.end_date, booking.property_id, current_user["user_id"])
+    )
+    conn.commit()
+    return {"message": "Buchung erfolgreich erstellt"}
+
+@app.get("/bookings")
+def get_bookings(current_user = Depends(require_staff)):
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM bookings")
+    rows = cursor.fetchall()
+    return [
+        {
+            "id": row[0],
+            "start_date": row[1],
+            "end_date": row[2],
+            "property_id": row[3],
+            "user_id": row[4],
+            "created_at": row[5]
+        }
+        for row in rows
+    ]
+@app.get("/bookings/me")
+def get_my_bookings(current_user = Depends(get_current_user)):
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM bookings WHERE user_id = %s", (current_user["user_id"],))
+    rows = cursor.fetchall()
+    return [
+        {
+            "id": row[0],
+            "start_date": row[1],
+            "end_date": row[2],
+            "property_id": row[3],
+            "user_id": row[4],
+            "created_at": row[5]
+        }
+        for row in rows
+    ]
 
 # User Endpoints
 
