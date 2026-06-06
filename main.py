@@ -114,6 +114,8 @@ def get_agency(id, current_user = Depends(require_staff)):
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM agencies WHERE id = %s", (id,))
     row = cursor.fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Agency not found")
     return {
                 "id": row[0],
                 "name": row[1],
@@ -154,23 +156,28 @@ def get_properties(current_user = Depends(get_current_user)):
     ]
 
 @app.get("/properties/{id}")
-def get_property(id, current_user = Depends(get_current_user)):
+def get_property(id: int, current_user = Depends(get_current_user)):
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM properties WHERE id = %s", (id,))
     row = cursor.fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Property not found")
     return {
-            "id": row[0],
-            "address": row[1],
-            "size_sqm": row[2],
-            "monthly_price": row [3],
-            "agency_id": row[4],
-            "is_occupied": row[5],
-            "created_at": row[6]
-        }
+        "id": row[0],
+        "address": row[1],
+        "size_sqm": row[2],
+        "monthly_price": row[3],
+        "agency_id": row[4],
+        "is_occupied": row[5],
+        "created_at": row[6]
+    }
 
 @app.delete("/properties/{id}")
 def delete_property(id: int, current_user = Depends(require_staff)):
     cursor = conn.cursor()
+    cursor.execute("SELECT id FROM properties WHERE id = %s", (id,))
+    if not cursor.fetchone():
+        raise HTTPException(status_code=404, detail="Property not found")
     cursor.execute("DELETE FROM properties WHERE id = %s", (id,))
     conn.commit()
     return {"message": "Immobilie erfolgreich gelöscht"}
@@ -223,10 +230,13 @@ def get_my_bookings(current_user = Depends(get_current_user)):
 @app.delete("/bookings/{id}")
 def delete_booking(id: int, current_user = Depends(require_admin)):
     cursor = conn.cursor()
+    cursor.execute("SELECT id FROM bookings WHERE id = %s", (id,))
+    if not cursor.fetchone():
+        raise HTTPException(status_code=404, detail="Booking not found")
     cursor.execute("DELETE FROM bookings WHERE id = %s", (id,))
     conn.commit()
     return {"message": "Buchung erfolgreich gelöscht"}
-
+    
 # User Endpoints
 
 @app.post("/register")
@@ -243,6 +253,9 @@ def register_user(user: UserCreate):
 @app.delete("/users/{id}")
 def deactivate_user(id: int, current_user = Depends(require_admin)):
     cursor = conn.cursor()
+    cursor.execute("SELECT id FROM users WHERE id = %s", (id,))
+    if not cursor.fetchone():
+        raise HTTPException(status_code=404, detail="User not found")
     cursor.execute("UPDATE users SET is_active = false WHERE id = %s", (id,))
     conn.commit()
     return {"message": "User erfolgreich deaktiviert"}
