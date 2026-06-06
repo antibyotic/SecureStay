@@ -2,7 +2,7 @@ import psycopg2
 import os
 from fastapi import FastAPI 
 from dotenv import load_dotenv
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional
 import bcrypt
 from jose import jwt
@@ -56,29 +56,29 @@ def health_check():
 # Models
 
 class AgencyCreate(BaseModel):
-    name: str
-    domain: str
-    email: str
-    phone: str 
-    address: str 
+    name: str = Field(min_length=2, max_length=100)
+    domain: str = Field(min_length=3, max_length=100)
+    email: str = Field(min_length=5, max_length=100)
+    phone: str = Field(min_length=5, max_length=20)
+    address: str = Field(min_length=5, max_length=200)
 
 class UserCreate(BaseModel):
-    name: str
-    email: str
-    password: str
-    agency_id: Optional[int] = None 
+    name: str = Field(min_length=2, max_length=100)
+    email: str = Field(min_length=5, max_length=100)
+    password: str = Field(min_length=8)
+    agency_id: Optional[int] = None
     
 class PropertyCreate(BaseModel):
-    address: str
-    size_sqm: float
-    monthly_price: float
-    agency_id: int
+    address: str = Field(min_length=5, max_length=200)
+    size_sqm: float = Field(gt=0)
+    monthly_price: float = Field(gt=0)
+    agency_id: int = Field(gt=0)
 
 class BookingCreate(BaseModel):
     start_date: datetime
     end_date: datetime
-    property_id: int
-
+    property_id: int = Field(gt=0)
+    
 # Agency Endpoints
 
 @app.post("/agencies")
