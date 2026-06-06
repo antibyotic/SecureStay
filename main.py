@@ -16,6 +16,8 @@ app = FastAPI()
 
 security = HTTPBearer()
 
+# Authorization
+
 def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
     token = credentials.credentials
     try:
@@ -42,11 +44,15 @@ conn = psycopg2.connect(
     password=os.getenv("DB_PASSWORD")
 )
 
+# Health Check
+
 @app.get("/health")
 def health_check():
     cursor = conn.cursor()
     cursor.execute("SELECT 1")
     return {"status": "Datenbankverbindung erfolgreich"}
+
+# Models
 
 class AgencyCreate(BaseModel):
     name: str
@@ -61,8 +67,13 @@ class UserCreate(BaseModel):
     password: str
     agency_id: Optional[int] = None 
     
+class PropertyCreate(BaseModel):
+    address: str
+    size_sqm: float
+    monthly_price: float
+    agency_id: int
 
-
+# Agency Endpoints
 
 @app.post("/agencies")
 def create_agency(agency:AgencyCreate, current_user = Depends(require_admin)):
@@ -106,6 +117,54 @@ def get_agency(id, current_user = Depends(require_staff)):
                 "address": row[5],
                 "created_at": row[6]
     }
+
+# Property Endpoints
+
+@app.post("/properties")
+def create_property(property: PropertyCreate, current_user = Depends(require_staff)):
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT INTO properties (address, size_sqm, monthly_price, agency_id, is_occupied, created_at) VALUES (%s, %s, %s, %s, %s, NOW())",
+        (property.address, property.size_sqm, property.monthly_price, property.agency_id, False)
+    )
+    conn.commit()
+    return {"message": "Immobilie erfolgreich erstellt"}
+
+@app.get("/properties")
+def get_properties(current_user = Depends(get_current_user)):
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM properties")
+    rows = cursor.fetchall()
+    return [
+        {
+            "id": row[0],
+            "address": row[1],
+            "size_sqm": row[2],
+            "monthly_price": row [3],
+            "agency_id": row[4],
+            "is_occupied": row[5],
+            "created_at": row[6]
+        } for row in rows
+    ]
+
+@app.get("/properties/{id}")
+def get_property(id, current_user = Depends(get_current_user)):
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM properties WHERE id = %s", (id,))
+    row = cursor.fetchone()
+    return {
+            "id": row[0],
+            "address": row[1],
+            "size_sqm": row[2],
+            "monthly_price": row [3],
+            "agency_id": row[4],
+            "is_occupied": row[5],
+            "created_at": row[6]
+        }
+    
+
+
+# User Endpoints
 
 @app.post("/register")
 def register_user(user: UserCreate):
